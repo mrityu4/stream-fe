@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 
-const ScreenCapture = () => {
-  const [stream, setStream] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const videoRef = useRef(null);
-  const wsRef = useRef(null);
+const App = () => {
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [ws, setWs] = useState(null);
 
   const startCapture = async () => {
     try {
@@ -85,49 +83,14 @@ const ScreenCapture = () => {
     }
   };
 
-  const initWebSocket = (mediaStream) => {
-    const ws = new WebSocket('ws://localhost:3000');
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      setIsConnected(true);
-      console.log('WebSocket connection established');
-      startStreaming(mediaStream);
-    };
-
-    ws.onclose = () => {
-      setIsConnected(false);
-      console.log('WebSocket connection closed');
-    };
-
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-  };
-
-  const startStreaming = (mediaStream) => {
-    const videoTrack = mediaStream.getVideoTracks()[0];
-    const imageCapture = new ImageCapture(videoTrack);
-
-    const sendFrame = async () => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        try {
-          const bitmap = await imageCapture.grabFrame();
-          const canvas = document.createElement('canvas');
-          canvas.width = bitmap.width;
-          canvas.height = bitmap.height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(bitmap, 0, 0);
-          const jpeg = canvas.toDataURL('image/jpeg', 0.7);
-          wsRef.current.send(jpeg);
-        } catch (error) {
-          console.error('Error capturing or sending frame:', error);
-        }
+  const stopCapture = () => {
+    if (mediaRecorder) {
+      mediaRecorder.stop();
+      if (ws) {
+        ws.send(JSON.stringify({ type: 'close' })); // Optional close signal
+        ws.close(); // Close WebSocket connection
       }
-      requestAnimationFrame(sendFrame);
-    };
-
-    sendFrame();
+    }
   };
 
   return (
@@ -140,4 +103,4 @@ const ScreenCapture = () => {
   );
 };
 
-export default ScreenCapture;
+export default App;
